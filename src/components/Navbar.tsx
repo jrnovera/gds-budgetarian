@@ -27,21 +27,35 @@ function UserMenu({ user }: { user: any }) {
     navigate('/login');
   };
 
+  // Get first letter of name or email
+  const getInitial = () => {
+    if (user.name) {
+      return user.name.charAt(0).toUpperCase();
+    }
+    return user.email.charAt(0).toUpperCase();
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className="flex items-center space-x-2 focus:outline-none"
+        className="flex items-center space-x-2 focus:outline-none hover:opacity-80 transition-opacity"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
       >
-        <User className="h-6 w-6 text-gray-600" />
-        <span className="text-gray-600 text-sm">{user.email}</span>
+        {/* Round avatar with initial */}
+        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-yellow-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
+          {getInitial()}
+        </div>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg py-2 z-50 border">
+        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50 border">
+          <div className="px-4 py-2 border-b border-gray-100">
+            <p className="text-sm font-medium text-gray-900">{user.name || 'User'}</p>
+            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+          </div>
           <button
-            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors"
             onClick={handleLogout}
           >
             Log out
@@ -70,7 +84,7 @@ export default function Navbar() {
 
           {/* Show Admin/Staff links based on role */}
           {user && user.role === 'admin' ? (
-            <Link to="/admin/dashboard" className="text-gray-600 hover:text-primary transition-colors">
+            <Link to="/admin/analytics" className="text-gray-600 hover:text-primary transition-colors">
               Admin Dashboard
             </Link>
           ) : user && user.role === 'staff' ? (

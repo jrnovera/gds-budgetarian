@@ -3,7 +3,9 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order, Product } from '../../types';
 import { getAuth } from 'firebase/auth';
-import { DollarSign, ShoppingBag, Users, TrendingUp } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, TrendingUp, FileDown } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 export default function Analytics() {
   const auth = getAuth();
@@ -148,9 +150,136 @@ export default function Analytics() {
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+  const exportToExcel = () => {
+    try {
+      // Filter orders based on current month/year selection
+      let filteredOrders = allOrders;
+      if (filterMonth !== 'all' || filterYear !== 'all') {
+        filteredOrders = allOrders.filter(order => {
+          const date = order.createdAt && typeof order.createdAt === 'object' && 'seconds' in order.createdAt && typeof (order.createdAt as { seconds?: unknown }).seconds === 'number'
+            ? new Date((order.createdAt as { seconds: number }).seconds * 1000)
+            : order.createdAt ? new Date(order.createdAt) : null;
+          if (!date) return false;
+          const m = date.getMonth();
+          const y = date.getFullYear();
+          return (filterMonth === 'all' || m === Number(filterMonth)) &&
+                 (filterYear === 'all' || y === Number(filterYear));
+        });
+      }
+
+      // Create Summary Sheet
+      const summaryData = [
+        ['GDS Budgetarian - Sales Report'],
+        [''],
+        ['Report Period:', filterMonth === 'all' && filterYear === 'all' ? 'All Time' :
+          `${filterMonth !== 'all' ? monthNames[Number(filterMonth)] : 'All Months'} ${filterYear !== 'all' ? filterYear : ''}`],
+        ['Generated On:', new Date().toLocaleString()],
+        [''],
+        ['SUMMARY'],
+        ['Total Revenue', `₱${stats.totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`],
+        ['Total Orders', stats.totalOrders],
+        ['Total Customers', stats.totalCustomers],
+        ['Total Products', stats.totalProducts],
+        ['Average Order Value', stats.totalOrders > 0 ? `₱${(stats.totalRevenue / stats.totalOrders).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '₱0.00'],
+      ];
+
+      // Create Orders Detail Sheet
+      const ordersData = [
+        ['Order ID', 'Date', 'Customer Name', 'Email', 'Phone', 'Address', 'Payment Method', 'Status', 'Subtotal', 'Shipping', 'Total', 'Items Count']
+      ];
+
+      filteredOrders.forEach(order => {
+        const date = order.createdAt && typeof order.createdAt === 'object' && 'seconds' in order.createdAt && typeof (order.createdAt as { seconds?: unknown }).seconds === 'number'
+          ? new Date((order.createdAt as { seconds: number }).seconds * 1000)
+          : order.createdAt ? new Date(order.createdAt) : null;
+
+        ordersData.push([
+          order.id,
+          date ? date.toLocaleDateString() : 'N/A',
+          order.shippingAddress?.name || order.firstName && order.lastName ? `${order.firstName} ${order.lastName}` : 'N/A',
+          (order as any).email || 'N/A',
+          order.shippingAddress?.phone || (order as any).phone || 'N/A',
+          order.shippingAddress ? `${order.shippingAddress.street}, ${order.shippingAddress.city}` : 'N/A',
+          (order as any).paymentMethod || 'N/A',
+          order.status || 'pending',
+          order.subtotal || 0,
+          order.shippingCost || 0,
+          order.total || 0,
+          order.items?.length || 0
+        ]);
+      });
+
+      // Create Product Sales Sheet
+      const productSalesMap = new Map<string, { name: string, quantity: number, revenue: number }>();
+
+      filteredOrders.forEach(order => {
+        if (Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            const current = productSalesMap.get(item.productId) || { name: '', quantity: 0, revenue: 0 };
+            productSalesMap.set(item.productId, {
+              name: current.name || `Product ${item.productId.substring(0, 8)}`,
+              quantity: current.quantity + item.quantity,
+              revenue: current.revenue + (item.price * item.quantity)
+            });
+          });
+        }
+      });
+
+      const productSalesData = [
+        ['Product ID', 'Product Name', 'Units Sold', 'Total Revenue']
+      ];
+
+      Array.from(productSalesMap.entries())
+        .sort((a, b) => b[1].quantity - a[1].quantity)
+        .forEach(([productId, data]) => {
+          productSalesData.push([
+            productId,
+            data.name,
+            data.quantity,
+            data.revenue
+          ]);
+        });
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // Add Summary sheet
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+      // Add Orders sheet
+      const wsOrders = XLSX.utils.aoa_to_sheet(ordersData);
+      XLSX.utils.book_append_sheet(wb, wsOrders, 'Orders');
+
+      // Add Product Sales sheet
+      const wsProducts = XLSX.utils.aoa_to_sheet(productSalesData);
+      XLSX.utils.book_append_sheet(wb, wsProducts, 'Product Sales');
+
+      // Generate filename with date
+      const fileName = `GDS_Budgetarian_Sales_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, fileName);
+
+      toast.success('Excel file exported successfully!');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-8">Analytics Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+        <button
+          onClick={exportToExcel}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-md"
+        >
+          <FileDown className="h-5 w-5" />
+          Export to Excel
+        </button>
+      </div>
       <div className="flex flex-wrap gap-4 items-end mb-4">
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1">Month</label>

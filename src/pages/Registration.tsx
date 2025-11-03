@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { auth } from '../lib/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import emailjs from '@emailjs/browser';
 
 const Registration: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -56,15 +59,79 @@ const Registration: React.FC = () => {
 
     setLoading(true);
     try {
+      // 1. Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      await updateProfile(userCredential.user, { 
+      const user = userCredential.user;
+
+      // 2. Update profile with display name
+      await updateProfile(user, {
         displayName: formData.username
       });
-      navigate('/');
+
+      // 3. Create Firestore user document with emailVerified: false
+      await setDoc(doc(db, 'users', user.uid), {
+        id: user.uid,
+        email: formData.email,
+        name: formData.username,
+        phone: formData.phone,
+        role: 'user',
+        addresses: [],
+        emailVerified: false,
+        createdAt: new Date()
+      });
+
+      // 4. Generate verification token
+      const token = `${user.uid}_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
+      // 5. Store verification token in Firestore (expires in 24 hours)
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      await setDoc(doc(db, 'verificationTokens', token), {
+        userId: user.uid,
+        email: formData.email,
+        createdAt: new Date(),
+        expiresAt: expiresAt
+      });
+
+      // 6. Create verification link
+      const verificationLink = `${window.location.origin}/verify-email?token=${token}`;
+
+      // 7. Send verification email via EmailJS
+      const emailParams = {
+        to_email: formData.email,
+        from_email: 'noreply@gdsbudgetarian.com',
+        user_name: formData.username,
+        verification_link: verificationLink,
+      };
+
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID,
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+        emailParams,
+        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+      );
+
+      // 8. Sign out the user
+      await signOut(auth);
+
+      // 9. Show success message and redirect to login
+      toast.success('Registration successful! Please check your email to verify your account.');
+      setError('');
+      navigate('/login');
     } catch (err: any) {
-      setError(err.message || 'Failed to register');
+      console.error('Registration error:', err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('This email is already registered. Please login instead.');
+      } else if (err.text) {
+        // EmailJS error
+        setError('Failed to send verification email. Please contact support.');
+      } else {
+        setError(err.message || 'Failed to register');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

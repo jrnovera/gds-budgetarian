@@ -4,7 +4,8 @@ export interface User {
   name: string;
   role: 'user' | 'admin' | 'staff';
   addresses: Address[];
-  phone?: string; // Add optional phone field
+  phone?: string;
+  emailVerified?: boolean;
 }
 
 export interface Product {
@@ -38,6 +39,12 @@ export interface CartItem {
   price: number;
 }
 
+export interface StatusHistory {
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  timestamp: Date;
+  updatedBy?: string; // admin/staff who updated
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -52,6 +59,13 @@ export interface Order {
   total: number;
   createdAt: Date;
   updatedAt: Date;
+  validIdUrl?: string;
+  gcashNumber?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  statusHistory?: StatusHistory[]; // Track all status changes
 }
 
 export interface Address {
@@ -64,4 +78,19 @@ export interface Address {
   postalCode: string;
   country: string;
   phone: string;
+}
+
+export interface Notification {
+  id: string;
+  type: 'new_order' | 'order_updated' | 'order_cancelled';
+  orderId: string;
+  message: string;
+  recipientRole: 'admin' | 'staff' | 'both';
+  read: boolean;
+  createdAt: any;
+  metadata?: {
+    customerName?: string;
+    orderTotal?: number;
+    paymentMethod?: string;
+  };
 }

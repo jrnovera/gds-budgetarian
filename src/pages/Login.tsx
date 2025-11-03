@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase'; // <-- make sure this exports your Firestore instance
+import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
+import toast from 'react-hot-toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -32,35 +33,58 @@ const Login: React.FC = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Get the user role from Firestore
+      // 2. Get the user data from Firestore
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        const role = userData.role;
-        
-        // Set authenticated user in the auth store
-        setAuthUser({
-          id: user.uid,
-          email: userData.email || user.email || '',
-          name: userData.name || user.displayName || 'User',
-          role: userData.role || 'user',
-          addresses: userData.addresses || []
-        });
-
-        // 3. Navigate based on role
-        if (role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/');
-        }
-      } else {
+      if (!userDocSnap.exists()) {
         setError('User data not found');
+        await signOut(auth);
+        return;
+      }
+
+      const userData = userDocSnap.data();
+
+      // 3. Check if email is verified in Firestore (only for regular users, not admin or staff)
+      if (userData.role === 'user' && !userData.emailVerified) {
+        await signOut(auth);
+        setError('Please verify your email before logging in. Check your inbox for the verification link.');
+        setLoading(false);
+        toast.error('Email not verified. Please check your email inbox.');
+        return;
+      }
+
+      const role = userData.role;
+
+      // 4. Set authenticated user in the auth store
+      setAuthUser({
+        id: user.uid,
+        email: userData.email || user.email || '',
+        name: userData.name || user.displayName || 'User',
+        role: userData.role || 'user',
+        addresses: userData.addresses || [],
+        emailVerified: userData.emailVerified
+      });
+
+      // 5. Navigate based on role
+      if (role === 'admin') {
+        navigate('/admin/analytics');
+      } else if (role === 'staff') {
+        navigate('/staff');
+      } else {
+        navigate('/');
       }
     } catch (err: any) {
       console.error(err);
-      setError('Invalid credentials or user does not exist');
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError('Invalid email or password');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later.');
+      } else if (err.code === 'auth/invalid-credential') {
+        setError('Invalid email or password');
+      } else {
+        setError('Invalid credentials or user does not exist');
+      }
     } finally {
       setLoading(false);
     }

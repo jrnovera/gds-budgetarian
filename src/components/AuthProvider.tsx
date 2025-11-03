@@ -41,7 +41,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
             email: firebaseUser.email!,
             name: firebaseUser.displayName || userData.name || 'User',
             role: (userData?.role || 'user') as 'user' | 'admin' | 'staff',
-            addresses: userData?.addresses || []
+            addresses: userData?.addresses || [],
+            emailVerified: firebaseUser.emailVerified
           });
         } else {
           setUser(null);

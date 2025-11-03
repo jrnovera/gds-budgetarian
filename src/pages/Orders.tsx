@@ -4,6 +4,13 @@ import ReviewModal from '../components/ReviewModal';
 import { db } from '../lib/firebase';
 import { collection, getDocs, QueryDocumentSnapshot, DocumentData, addDoc, query, where, doc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
+import { Clock, Package, Truck, CheckCircle, AlertCircle, History as HistoryIcon } from 'lucide-react';
+
+interface StatusHistory {
+  status: string;
+  timestamp: any;
+  updatedBy?: string;
+}
 
 interface Order {
   id: string;
@@ -22,6 +29,8 @@ interface Order {
   total: number;
   isDelivered: boolean;
   isReceived?: boolean; // Track if order has been received
+  status?: string; // Add status field
+  statusHistory?: StatusHistory[]; // Track status changes
   createdAt?: { seconds: number; nanoseconds: number };
   items?: Array<{productId: string, productName: string, quantity: number, price: number}>;
 }
@@ -33,6 +42,35 @@ const Orders: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4 text-yellow-600" />;
+      case 'processing': return <Package className="w-4 h-4 text-blue-600" />;
+      case 'shipped': return <Truck className="w-4 h-4 text-purple-600" />;
+      case 'delivered': return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'cancelled': return <AlertCircle className="w-4 h-4 text-red-600" />;
+      default: return <Clock className="w-4 h-4 text-yellow-600" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (status === 'processing') return 'Preparing';
+    if (!status) return 'Pending';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -96,7 +134,8 @@ const Orders: React.FC = () => {
             </thead>
             <tbody>
               {orders.map(order => (
-                <tr key={order.id} className="hover:bg-gray-100">
+                <React.Fragment key={order.id}>
+                  <tr className="hover:bg-gray-100">
                   <td className="py-1 px-2 border-b text-xs break-all">{order.id}</td>
                   <td className="py-1 px-2 border-b whitespace-nowrap">{order.firstName} {order.lastName}</td>
                   <td className="py-1 px-2 border-b whitespace-nowrap">{order.email}</td>
@@ -112,10 +151,29 @@ const Orders: React.FC = () => {
                   <td className="py-1 px-2 border-b">{formatPeso(order.shipping)}</td>
                   <td className="py-1 px-2 border-b font-bold">{formatPeso(order.total)}</td>
                   <td className="py-1 px-2 border-b">
-                    {order.isDelivered ? (
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">Out for delivery</span>
-                        {order.isReceived ? (
+                    <div className="flex flex-col items-start gap-1">
+                      {/* Current Status */}
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(order.status || 'pending')}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(order.status || 'pending')}`}>
+                          {getStatusLabel(order.status || 'pending')}
+                        </span>
+                      </div>
+
+                      {/* View History Button */}
+                      {order.statusHistory && order.statusHistory.length > 1 && (
+                        <button
+                          className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
+                        >
+                          <HistoryIcon className="w-3 h-3" />
+                          {expandedOrderId === order.id ? 'Hide' : 'View'} History
+                        </button>
+                      )}
+
+                      {/* Action Buttons */}
+                      {order.status === 'delivered' && (
+                        order.isReceived ? (
                           <button
                             className="mt-1 px-3 py-0.5 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition"
                             onClick={() => {
@@ -132,10 +190,10 @@ const Orders: React.FC = () => {
                               try {
                                 const orderRef = doc(db, 'orders', order.id);
                                 await updateDoc(orderRef, { isReceived: true });
-                                
+
                                 // Update local state with the received status
-                                setOrders(prevOrders => 
-                                  prevOrders.map(o => 
+                                setOrders(prevOrders =>
+                                  prevOrders.map(o =>
                                     o.id === order.id ? { ...o, isReceived: true } : o
                                   )
                                 );
@@ -147,14 +205,77 @@ const Orders: React.FC = () => {
                           >
                             Receive Order
                           </button>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">Preparing</span>
-                    )}
+                        )
+                      )}
+                    </div>
                   </td>
-                  <td className="py-1 px-2 border-b text-xs whitespace-nowrap">{formatDate(order.createdAt)}</td>
-                </tr>
+                    <td className="py-1 px-2 border-b text-xs whitespace-nowrap">{formatDate(order.createdAt)}</td>
+                  </tr>
+                  {/* Status History Row */}
+                  {expandedOrderId === order.id && order.statusHistory && order.statusHistory.length > 0 && (
+                    <tr>
+                      <td colSpan={11} className="p-0 bg-indigo-50">
+                      <div className="p-4">
+                        <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                          <HistoryIcon className="w-4 h-4 text-indigo-600" />
+                          Order Status History
+                        </h4>
+                        <div className="space-y-2">
+                          {order.statusHistory
+                            .slice()
+                            .sort((a, b) => {
+                              const timeA = a.timestamp?.seconds ? a.timestamp.seconds * 1000 : new Date(a.timestamp).getTime();
+                              const timeB = b.timestamp?.seconds ? b.timestamp.seconds * 1000 : new Date(b.timestamp).getTime();
+                              return timeB - timeA; // newest first
+                            })
+                            .map((history, index) => (
+                              <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-lg border-l-4 border-indigo-400 shadow-sm">
+                                <div className="flex-shrink-0 mt-1">
+                                  {getStatusIcon(history.status)}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(history.status)}`}>
+                                      {getStatusLabel(history.status)}
+                                    </span>
+                                    {index === 0 && (
+                                      <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full font-medium">
+                                        Current
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-2">
+                                    {history.timestamp?.seconds
+                                      ? new Date(history.timestamp.seconds * 1000).toLocaleString('en-PH', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                      : new Date(history.timestamp).toLocaleString('en-PH', {
+                                          year: 'numeric',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })
+                                    }
+                                  </p>
+                                  {history.updatedBy && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Updated by: <span className="font-medium">{history.updatedBy}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

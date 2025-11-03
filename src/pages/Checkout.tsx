@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useCartStore } from '../store/useCartStore';
+import { createNewOrderNotification } from '../lib/notifications';
 
 interface FormData {
   userId: string;
@@ -18,6 +20,7 @@ interface FormData {
   paymentMethod: 'cod' | 'gcash';
   gcashNumber?: string;
   isDelivered: boolean;
+  validIdUrl?: string;
 }
 
 import { useAuthStore } from '../store/useAuthStore';
@@ -50,12 +53,77 @@ const Checkout: React.FC = () => {
     paymentMethod: 'cod',
     gcashNumber: '',
     isDelivered: false,
+    validIdUrl: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [validIdFile, setValidIdFile] = useState<File | null>(null);
+  const [uploadingId, setUploadingId] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a valid image file (JPEG, PNG, or GIF)');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 5MB');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    setValidIdFile(file);
+    setUploadingId(true);
+
+    try {
+      console.log('Starting upload for user:', user?.id);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+
+      // Upload to Firebase Storage
+      const fileName = `${user?.id}-${Date.now()}-${file.name}`;
+      const storageRef = ref(storage, `valid-ids/${fileName}`);
+
+      console.log('Uploading to storage path:', `valid-ids/${fileName}`);
+      const uploadResult = await uploadBytes(storageRef, file);
+      console.log('Upload completed:', uploadResult);
+
+      const downloadURL = await getDownloadURL(storageRef);
+      console.log('Download URL obtained:', downloadURL);
+
+      setFormData(prev => ({ ...prev, validIdUrl: downloadURL }));
+      setErrors(prev => ({ ...prev, validId: '' })); // Clear any previous errors
+      toast.success('Valid ID uploaded successfully!');
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+
+      let errorMessage = 'Failed to upload ID. Please try again.';
+      if (error?.code === 'storage/unauthorized') {
+        errorMessage = 'Permission denied. Please contact support.';
+      } else if (error?.message) {
+        errorMessage = `Upload failed: ${error.message}`;
+      }
+
+      toast.error(errorMessage);
+      setValidIdFile(null);
+      setFormData(prev => ({ ...prev, validIdUrl: '' }));
+      e.target.value = ''; // Reset input so user can try again
+    } finally {
+      setUploadingId(false);
+    }
   };
 
   // Simple validators
@@ -78,6 +146,9 @@ const Checkout: React.FC = () => {
     if (formData.paymentMethod === 'gcash') {
       if (!formData.gcashNumber) newErrors.gcashNumber = 'GCash number is required';
       else if (!validateGCash(formData.gcashNumber)) newErrors.gcashNumber = 'Invalid GCash number (must be 11 digits, start with 09)';
+    }
+    if (formData.paymentMethod === 'cod' && !formData.validIdUrl) {
+      newErrors.validId = 'Valid ID is required for Cash on Delivery';
     }
     return newErrors;
   };
@@ -102,7 +173,7 @@ const Checkout: React.FC = () => {
       }
       // Use the calculated cart summary values for consistency
       const { subtotal, shipping, total } = cartSummary;
-      await addDoc(collection(db, 'orders'), {
+      const orderData: any = {
         ...formData,
         userId: user?.id || '',
         isDelivered: false,
@@ -111,12 +182,32 @@ const Checkout: React.FC = () => {
         subtotal,
         shipping,
         total,
+        status: 'pending',
         createdAt: Timestamp.now(),
-      });
+        statusHistory: [
+          {
+            status: 'pending',
+            timestamp: Timestamp.now(),
+            updatedBy: 'system'
+          }
+        ]
+      };
+
+      // Include validIdUrl only if COD is selected
+      if (formData.paymentMethod === 'cod' && formData.validIdUrl) {
+        orderData.validIdUrl = formData.validIdUrl;
+      }
+
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+
+      // Create notification for admin/staff
+      await createNewOrderNotification(docRef.id, orderData);
+
       clearCart();
       toast.success('Order placed successfully!');
       navigate('/');
     } catch (err) {
+      console.error('Error placing order:', err);
       toast.error('Failed to place order. Please try again.');
     } finally {
       setSubmitting(false);
@@ -327,14 +418,58 @@ const Checkout: React.FC = () => {
                   )}
                 </div>
               )}
+              {formData.paymentMethod === 'cod' && (
+                <div>
+                  <label className="block text-gray-700 mb-2">
+                    Upload Valid ID <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Please upload a clear photo of your valid government-issued ID (e.g., Driver's License, Passport, National ID)
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className={`w-full border rounded-lg px-4 py-2 ${errors.validId ? 'border-red-500' : ''}`}
+                    disabled={uploadingId}
+                  />
+                  {uploadingId && (
+                    <p className="text-blue-600 text-sm mt-2 flex items-center">
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </p>
+                  )}
+                  {formData.validIdUrl && !uploadingId && (
+                    <div className="mt-2">
+                      <p className="text-green-600 text-sm flex items-center">
+                        <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        ID uploaded successfully
+                      </p>
+                      <img
+                        src={formData.validIdUrl}
+                        alt="Valid ID"
+                        className="mt-2 max-w-xs rounded-lg border"
+                      />
+                    </div>
+                  )}
+                  {errors.validId && (
+                    <p id="validId-error" className="text-red-500 text-sm mt-1">{errors.validId}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <button
             type="submit"
             className="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-700 transition-colors mt-6 disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={submitting}
+            disabled={submitting || uploadingId || (formData.paymentMethod === 'cod' && !formData.validIdUrl)}
           >
-            {submitting ? 'Placing Order...' : 'Place Order'}
+            {submitting ? 'Placing Order...' : uploadingId ? 'Uploading ID...' : 'Place Order'}
           </button>
         </form>
         {/* Order Summary */}
