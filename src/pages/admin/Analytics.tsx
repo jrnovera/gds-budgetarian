@@ -270,21 +270,21 @@ export default function Analytics() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Analytics Dashboard</h1>
         <button
           onClick={exportToExcel}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-md"
+          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors shadow-md"
         >
           <FileDown className="h-5 w-5" />
-          Export to Excel
+          <span>Export to Excel</span>
         </button>
       </div>
-      <div className="flex flex-wrap gap-4 items-end mb-4">
-        <div>
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end mb-6">
+        <div className="flex-1 min-w-[120px]">
           <label className="block text-xs font-semibold text-gray-600 mb-1">Month</label>
           <select
-            className="border rounded px-2 py-1 text-sm"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={filterMonth}
             onChange={e => setFilterMonth(e.target.value)}
           >
@@ -294,10 +294,10 @@ export default function Analytics() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="flex-1 min-w-[120px]">
           <label className="block text-xs font-semibold text-gray-600 mb-1">Year</label>
           <select
-            className="border rounded px-2 py-1 text-sm"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
           >
@@ -308,74 +308,74 @@ export default function Analytics() {
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6 flex items-center gap-4">
-          <div className="bg-purple-100 p-3 rounded-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow-md p-5 md:p-6 flex items-center gap-4 border-l-4 border-purple-500">
+          <div className="bg-purple-100 p-3 rounded-full flex-shrink-0">
             <DollarSign className="h-6 w-6 text-purple-600" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="text-gray-500 text-xs font-semibold uppercase mb-1">Total Revenue</div>
-            <div className="text-xl font-bold text-gray-900">₱{stats.totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+            <div className="text-lg md:text-xl font-bold text-gray-900 truncate">₱{stats.totalRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-5 md:p-6 rounded-lg shadow-md border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Total Orders</p>
-              <p className="text-2xl font-bold">{stats.totalOrders}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs md:text-sm text-gray-500 mb-1 font-semibold uppercase">Total Orders</p>
+              <p className="text-xl md:text-2xl font-bold">{stats.totalOrders}</p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
+            <div className="bg-blue-100 p-3 rounded-full flex-shrink-0">
               <ShoppingBag className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-5 md:p-6 rounded-lg shadow-md border-l-4 border-green-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Total Customers</p>
-              <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs md:text-sm text-gray-500 mb-1 font-semibold uppercase">Total Customers</p>
+              <p className="text-xl md:text-2xl font-bold">{stats.totalCustomers}</p>
             </div>
-            <div className="bg-purple-100 p-3 rounded-full">
+            <div className="bg-purple-100 p-3 rounded-full flex-shrink-0">
               <Users className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-5 md:p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Total Products</p>
-              <p className="text-2xl font-bold">{stats.totalProducts}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs md:text-sm text-gray-500 mb-1 font-semibold uppercase">Total Products</p>
+              <p className="text-xl md:text-2xl font-bold">{stats.totalProducts}</p>
             </div>
-            <div className="bg-yellow-100 p-3 rounded-full">
+            <div className="bg-yellow-100 p-3 rounded-full flex-shrink-0">
               <TrendingUp className="h-6 w-6 text-yellow-600" />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold">Recent Orders</h2>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200">
+          <div className="p-4 md:p-5 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-800">Recent Orders</h2>
           </div>
-          <div className="p-4">
-            <div className="space-y-4">
+          <div className="p-4 md:p-5">
+            <div className="space-y-3 md:space-y-4">
               {stats.recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">#{order.id.slice(0, 8)}</p>
-                    <p className="text-sm text-gray-500">
+                <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm md:text-base truncate">#{order.id.slice(0, 8)}</p>
+                    <p className="text-xs md:text-sm text-gray-500">
                       {new Date(order.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">₱{typeof order.total === 'number' ? order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : ''}</p>
-                    <p className={`text-sm ${
-                      order.status === 'delivered' ? 'text-green-600' : 
+                  <div className="text-right ml-4">
+                    <p className="font-medium text-sm md:text-base">₱{typeof order.total === 'number' ? order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : ''}</p>
+                    <p className={`text-xs md:text-sm font-semibold ${
+                      order.status === 'delivered' ? 'text-green-600' :
                       order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
                     }`}>
                       {typeof order.status === 'string' && order.status.length > 0
@@ -390,28 +390,28 @@ export default function Analytics() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold">Top Products</h2>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200">
+          <div className="p-4 md:p-5 border-b bg-gradient-to-r from-yellow-50 to-red-50">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-800">Top Products</h2>
           </div>
-          <div className="p-4">
-            <div className="space-y-4">
+          <div className="p-4 md:p-5">
+            <div className="space-y-3 md:space-y-4">
               {stats.topProducts.map((product) => (
-                <div key={product.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
+                <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center flex-1 min-w-0">
                     <img
                       src={product.images[0]}
                       alt={product.name}
-                      className="w-12 h-12 rounded-lg object-cover"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-lg object-cover flex-shrink-0"
                     />
-                    <div className="ml-3">
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-500">₱{typeof product.price === 'number' ? product.price.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : ''}</p>
+                    <div className="ml-3 flex-1 min-w-0">
+                      <p className="font-medium text-sm md:text-base truncate">{product.name}</p>
+                      <p className="text-xs md:text-sm text-gray-500">₱{typeof product.price === 'number' ? product.price.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : ''}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{product.totalSold} sold</p>
-                    <p className="text-sm text-gray-500">
+                  <div className="text-right ml-4">
+                    <p className="font-medium text-sm md:text-base">{product.totalSold} sold</p>
+                    <p className="text-xs md:text-sm text-gray-500">
                       ₱{typeof product.price === 'number' && typeof product.totalSold === 'number' ? (product.price * product.totalSold).toLocaleString('en-PH', { minimumFractionDigits: 2 }) : ''}
                     </p>
                   </div>

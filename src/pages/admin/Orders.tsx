@@ -330,11 +330,11 @@ export default function Orders() {
 
       {/* View Mode Toggle */}
       <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <button
               onClick={() => setViewMode('daily')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 viewMode === 'daily'
                   ? 'bg-red-500 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -344,7 +344,7 @@ export default function Orders() {
             </button>
             <button
               onClick={() => setViewMode('weekly')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 viewMode === 'weekly'
                   ? 'bg-red-500 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -354,7 +354,7 @@ export default function Orders() {
             </button>
             <button
               onClick={() => setViewMode('monthly')}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 sm:px-6 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 viewMode === 'monthly'
                   ? 'bg-red-500 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -365,11 +365,11 @@ export default function Orders() {
           </div>
 
           {viewMode === 'monthly' && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm sm:text-base"
               >
                 {monthNames.map((month, index) => (
                   <option key={index} value={index}>
@@ -380,7 +380,7 @@ export default function Orders() {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm sm:text-base"
               >
                 {[2024, 2025, 2026].map(year => (
                   <option key={year} value={year}>
@@ -406,14 +406,14 @@ export default function Orders() {
                 day: 'numeric'
               })})
             </h2>
-            <div className="mt-4 flex gap-6">
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-800">{todayOrders.length}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Total Orders</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-800">{todayOrders.length}</p>
               </div>
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Today's Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Today's Revenue</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   ₱{todayOrders.reduce((sum, o) => sum + o.total, 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -426,52 +426,60 @@ export default function Orders() {
               <p className="text-gray-500 text-lg">No orders today yet</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="p-4 space-y-4">
               {todayOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-red-300 transition-all cursor-pointer active:scale-[0.98]"
                   onClick={() => handleOrderClick(order)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-red-100 p-3 rounded-full">
-                        <Package className="w-6 h-6 text-red-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">
-                          {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleTimeString('en-PH')}
-                        </p>
-                      </div>
+                  {/* Mobile/Tablet Layout */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="bg-red-100 p-3 rounded-full flex-shrink-0">
+                      <Package className="w-5 h-5 text-red-600" />
                     </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <p className="font-bold text-lg text-gray-800">
-                          ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
-                      </div>
-                      <span className={`px-3 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
-                        {getStatusIcon(order.status || 'pending')}
-                        {order.status?.charAt(0).toUpperCase() + (order.status?.slice(1) || 'Pending')}
-                      </span>
-                      <button
-                        onClick={(e) => handleDeleteOrder(order.id, e)}
-                        disabled={deletingOrderId === order.id}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                        title="Delete Order"
-                      >
-                        {deletingOrderId === order.id ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-red-600"></div>
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
-                        )}
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-base mb-1">
+                        {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleTimeString('en-PH')}
+                      </p>
                     </div>
                   </div>
+
+                  {/* Order Details */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-bold text-xl text-gray-800">
+                        ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
+                    </div>
+                    <span className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
+                      {getStatusIcon(order.status || 'pending')}
+                      {order.status?.charAt(0).toUpperCase() + (order.status?.slice(1) || 'Pending')}
+                    </span>
+                  </div>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => handleDeleteOrder(order.id, e)}
+                    disabled={deletingOrderId === order.id}
+                    className="w-full py-2 px-4 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    {deletingOrderId === order.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Delete Order
+                      </>
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
@@ -496,14 +504,14 @@ export default function Orders() {
                 return `${monday.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} - ${sunday.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`;
               })()})
             </h2>
-            <div className="mt-4 flex gap-6">
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-800">{weeklyOrders.length}</p>
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Total Orders</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-800">{weeklyOrders.length}</p>
               </div>
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Weekly Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Weekly Revenue</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   ₱{weeklyOrders.reduce((sum, o) => sum + o.total, 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -516,52 +524,60 @@ export default function Orders() {
               <p className="text-gray-500 text-lg">No orders this week</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="p-4 space-y-4">
               {weeklyOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer active:scale-[0.98]"
                   onClick={() => handleOrderClick(order)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-blue-100 p-3 rounded-full">
-                        <Package className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800">
-                          {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleDateString('en-PH')} {order.createdAt.toLocaleTimeString('en-PH')}
-                        </p>
-                      </div>
+                  {/* Mobile/Tablet Layout */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="bg-blue-100 p-3 rounded-full flex-shrink-0">
+                      <Package className="w-5 h-5 text-blue-600" />
                     </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <p className="font-bold text-lg text-gray-800">
-                          ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
-                      </div>
-                      <span className={`px-3 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
-                        {getStatusIcon(order.status || 'pending')}
-                        {order.status?.charAt(0).toUpperCase() + (order.status?.slice(1) || 'Pending')}
-                      </span>
-                      <button
-                        onClick={(e) => handleDeleteOrder(order.id, e)}
-                        disabled={deletingOrderId === order.id}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                        title="Delete Order"
-                      >
-                        {deletingOrderId === order.id ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-red-600"></div>
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
-                        )}
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-base mb-1">
+                        {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleDateString('en-PH')} {order.createdAt.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                   </div>
+
+                  {/* Order Details */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-bold text-xl text-gray-800">
+                        ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                      </p>
+                      <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
+                    </div>
+                    <span className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
+                      {getStatusIcon(order.status || 'pending')}
+                      {order.status?.charAt(0).toUpperCase() + (order.status?.slice(1) || 'Pending')}
+                    </span>
+                  </div>
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => handleDeleteOrder(order.id, e)}
+                    disabled={deletingOrderId === order.id}
+                    className="w-full py-2 px-4 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2"
+                  >
+                    {deletingOrderId === order.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Delete Order
+                      </>
+                    )}
+                  </button>
                 </div>
               ))}
             </div>
@@ -577,16 +593,16 @@ export default function Orders() {
               <TrendingUp className="w-6 h-6 text-red-500" />
               {monthNames[selectedMonth]} {selectedYear} - Daily Breakdown
             </h2>
-            <div className="mt-4 flex gap-6">
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-800">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Total Orders</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-800">
                   {dailyOrders.reduce((sum, day) => sum + day.count, 0)}
                 </p>
               </div>
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm">
-                <p className="text-sm text-gray-500">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="bg-white px-3 sm:px-4 py-2 rounded-lg shadow-sm">
+                <p className="text-xs sm:text-sm text-gray-500">Monthly Revenue</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   ₱{dailyOrders.reduce((sum, day) => sum + day.revenue, 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -620,42 +636,60 @@ export default function Orders() {
                   </div>
 
                   {/* Orders for this day */}
-                  <div className="ml-10 space-y-2">
+                  <div className="space-y-3">
                     {day.orders.map((order) => (
                       <div
                         key={order.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                        className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-purple-300 transition-all cursor-pointer active:scale-[0.98]"
                         onClick={() => handleOrderClick(order)}
                       >
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleTimeString('en-PH')}
-                          </p>
+                        {/* Mobile/Tablet Layout */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="bg-purple-100 p-2 rounded-full flex-shrink-0">
+                            <Package className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm mb-1">
+                              {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <p className="font-semibold text-gray-800">
-                            ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                          </p>
-                          <span className={`px-2 py-1 inline-flex items-center gap-1 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
+
+                        {/* Order Details */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="font-bold text-lg text-gray-800">
+                              ₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-xs text-gray-500">{order.items.length} item(s)</p>
+                          </div>
+                          <span className={`px-3 py-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
                             {getStatusIcon(order.status || 'pending')}
                             {order.status?.charAt(0).toUpperCase() + (order.status?.slice(1) || 'Pending')}
                           </span>
-                          <button
-                            onClick={(e) => handleDeleteOrder(order.id, e)}
-                            disabled={deletingOrderId === order.id}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                            title="Delete Order"
-                          >
-                            {deletingOrderId === order.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </button>
                         </div>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={(e) => handleDeleteOrder(order.id, e)}
+                          disabled={deletingOrderId === order.id}
+                          className="w-full py-2 px-4 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 font-medium text-sm flex items-center justify-center gap-2"
+                        >
+                          {deletingOrderId === order.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-4 h-4" />
+                              Delete Order
+                            </>
+                          )}
+                        </button>
                       </div>
                     ))}
                   </div>

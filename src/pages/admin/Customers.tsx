@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { User, Order } from '../../types';
-import { Search, Mail, Phone, X, User as UserIcon, MapPin, Shield } from 'lucide-react';
+import { Search, Mail, Phone, X, User as UserIcon, MapPin, Shield, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Customer Details Modal Component
@@ -279,88 +279,143 @@ export default function Customers() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Addresses
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCustomers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-lg font-medium text-gray-600">
-                            {customer.name ? customer.name.charAt(0) : "?"}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {customer.name || <span className="italic text-gray-400">No Name</span>}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Member since {new Date().getFullYear()}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-500 mb-1">
-                        <Mail className="h-4 w-4 mr-2" />
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4 p-4">
+              {filteredCustomers.map((customer) => (
+                <div key={customer.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+                  {/* Customer Info */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-red-400 to-yellow-400 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-bold text-white">
+                        {customer.name ? customer.name.charAt(0).toUpperCase() : "?"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {customer.name || <span className="italic text-gray-400">No Name</span>}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Member since {new Date().getFullYear()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Mail className="h-4 w-4 mr-2 flex-shrink-0 text-gray-400" />
+                      <span className="truncate">
                         {customer.email || <span className="italic text-gray-400">No Email</span>}
+                      </span>
+                    </div>
+                    {customer.phone && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Phone className="h-4 w-4 mr-2 flex-shrink-0 text-gray-400" />
+                        <span>{customer.phone}</span>
                       </div>
-                      {customer.phone && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Phone className="h-4 w-4 mr-2" />
-                          {customer.phone}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      {customer.addresses && customer.addresses.length > 0 ? (
-                        customer.addresses.map((address, index) => (
-                          <div key={address.id || index} className="text-sm text-gray-500 mb-1">
-                            {address.street ? `${address.street}, ` : ''}
-                            {address.city ? `${address.city}, ` : ''}
-                            {address.state ? `${address.state} ` : ''}
-                            {address.postalCode || ''}
-                          </div>
-                        ))
-                      ) : customer.address ? (
-                        <span className="text-sm text-gray-500">{customer.address}</span>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">No addresses</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setIsModalOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        View Details
-                      </button>
-                    </td>
+                    )}
+                  </div>
+
+                  {/* View Details Button */}
+                  <button
+                    onClick={() => {
+                      setSelectedCustomer(customer);
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Details
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Addresses
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredCustomers.map((customer) => (
+                    <tr key={customer.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-lg font-medium text-gray-600">
+                              {customer.name ? customer.name.charAt(0) : "?"}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {customer.name || <span className="italic text-gray-400">No Name</span>}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              Member since {new Date().getFullYear()}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-500 mb-1">
+                          <Mail className="h-4 w-4 mr-2" />
+                          {customer.email || <span className="italic text-gray-400">No Email</span>}
+                        </div>
+                        {customer.phone && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Phone className="h-4 w-4 mr-2" />
+                            {customer.phone}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {customer.addresses && customer.addresses.length > 0 ? (
+                          customer.addresses.map((address, index) => (
+                            <div key={address.id || index} className="text-sm text-gray-500 mb-1">
+                              {address.street ? `${address.street}, ` : ''}
+                              {address.city ? `${address.city}, ` : ''}
+                              {address.state ? `${address.state} ` : ''}
+                              {address.postalCode || ''}
+                            </div>
+                          ))
+                        ) : customer.address ? (
+                          <span className="text-sm text-gray-500">{customer.address}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">No addresses</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setSelectedCustomer(customer);
+                            setIsModalOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         
         {/* Render the modal */}

@@ -284,84 +284,159 @@ export default function RoleManagement() {
             <p className="mt-4 text-gray-600">Loading users...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Current Role
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-lg font-medium text-gray-600">
-                            {user.name ? user.name.charAt(0) : "?"}
-                          </span>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.name || <span className="italic text-gray-400">No Name</span>}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {user.id}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {user.email || <span className="italic text-gray-400">No Email</span>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
-                          : user.role === 'staff'
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {user.role || 'user'}
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4 p-4">
+              {filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer active:scale-[0.98]"
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setIsModalOpen(true);
+                  }}
+                >
+                  {/* User Info */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-bold text-white">
+                        {user.name ? user.name.charAt(0).toUpperCase() : "?"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsModalOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 flex items-center justify-end w-full"
-                      >
-                        <Edit2 className="h-4 w-4 mr-1" />
-                        Update Role
-                      </button>
-                    </td>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                        {user.name || <span className="italic text-gray-400">No Name</span>}
+                      </h3>
+                      <p className="text-xs text-gray-500 truncate">
+                        ID: {user.id}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="mb-3">
+                    <p className="text-sm text-gray-600 truncate">
+                      {user.email || <span className="italic text-gray-400">No Email</span>}
+                    </p>
+                  </div>
+
+                  {/* Role Badge */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">Current Role:</span>
+                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      user.role === 'admin'
+                        ? 'bg-purple-100 text-purple-800'
+                        : user.role === 'staff'
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {user.role || 'user'}
+                    </span>
+                  </div>
+
+                  {/* Update Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedUser(user);
+                      setIsModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-all"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Update Role
+                  </button>
+                </div>
+              ))}
+
+              {filteredUsers.length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No users found matching your search.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Current Role
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {filteredUsers.length === 0 && !loading && (
-              <div className="p-8 text-center text-gray-500">
-                <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No users found matching your search.</p>
-              </div>
-            )}
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-lg font-medium text-gray-600">
+                              {user.name ? user.name.charAt(0) : "?"}
+                            </span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.name || <span className="italic text-gray-400">No Name</span>}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              ID: {user.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {user.email || <span className="italic text-gray-400">No Email</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          user.role === 'admin'
+                            ? 'bg-purple-100 text-purple-800'
+                            : user.role === 'staff'
+                            ? 'bg-orange-100 text-orange-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {user.role || 'user'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsModalOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 flex items-center justify-end w-full"
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Update Role
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {filteredUsers.length === 0 && (
+                <div className="p-8 text-center text-gray-500">
+                  <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No users found matching your search.</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 

@@ -5,7 +5,7 @@ import { Order, Product } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import {useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Package, Clock, Truck, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Users, ShoppingBag, History, Trash2 } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, AlertCircle, ChevronDown, ChevronUp, Users, ShoppingBag, History, Trash2, X, Eye } from 'lucide-react';
 import AdminHeader from '../../components/AdminHeader';
 
 export default function StaffDashboard() {
@@ -14,6 +14,8 @@ export default function StaffDashboard() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
   const [productCache, setProductCache] = useState<Record<string, Product>>({});
+  const [selectedOrderForModal, setSelectedOrderForModal] = useState<Order | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { user } = useAuthStore();
   const location = useLocation();
   
@@ -32,25 +34,39 @@ export default function StaffDashboard() {
   useEffect(() => {
     const state = location.state as { orderId?: string };
     const orderId = state?.orderId;
-    if (orderId) {
-      // Wait for orders to load, then expand the specific order
-      setTimeout(() => {
-        setExpandedOrders(prev => ({
-          ...prev,
-          [orderId]: true
-        }));
+    if (orderId && orders.length > 0) {
+      // Check if mobile (screen width < 768px which is md breakpoint)
+      const isMobile = window.innerWidth < 768;
 
-        // Scroll to the order
-        const orderElement = document.getElementById(`order-${orderId}`);
-        if (orderElement) {
-          orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Highlight the order briefly
-          orderElement.classList.add('ring-4', 'ring-blue-400', 'ring-opacity-50');
-          setTimeout(() => {
-            orderElement.classList.remove('ring-4', 'ring-blue-400', 'ring-opacity-50');
-          }, 2000);
-        }
-      }, 100);
+      // Find the order
+      const order = orders.find(o => o.id === orderId);
+
+      if (isMobile && order) {
+        // On mobile, open modal
+        setTimeout(() => {
+          setSelectedOrderForModal(order);
+          setIsModalOpen(true);
+        }, 100);
+      } else {
+        // On desktop, expand the order
+        setTimeout(() => {
+          setExpandedOrders(prev => ({
+            ...prev,
+            [orderId]: true
+          }));
+
+          // Scroll to the order
+          const orderElement = document.getElementById(`order-${orderId}`);
+          if (orderElement) {
+            orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Highlight the order briefly
+            orderElement.classList.add('ring-4', 'ring-blue-400', 'ring-opacity-50');
+            setTimeout(() => {
+              orderElement.classList.remove('ring-4', 'ring-blue-400', 'ring-opacity-50');
+            }, 2000);
+          }
+        }, 100);
+      }
     }
   }, [location.state, orders]);
 
@@ -195,11 +211,22 @@ export default function StaffDashboard() {
         return newState;
       });
 
+      // Close modal if this order was open
+      if (selectedOrderForModal?.id === orderId) {
+        setIsModalOpen(false);
+        setSelectedOrderForModal(null);
+      }
+
       toast.success('Order deleted successfully');
     } catch (error) {
       console.error('Error deleting order:', error);
       toast.error('Failed to delete order');
     }
+  };
+
+  const openOrderModal = (order: Order) => {
+    setSelectedOrderForModal(order);
+    setIsModalOpen(true);
   };
 
   const filteredOrders = (selectedStatus === 'all' 
@@ -281,40 +308,87 @@ export default function StaffDashboard() {
               <p>No orders found.</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredOrders.map((order) => (
-                <div key={order.id} id={`order-${order.id}`} className="bg-white transition-all duration-200">
-                  {/* Order header - always visible */}
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4 p-4">
+                {filteredOrders.map((order) => (
                   <div
-                    className="p-4 md:px-6 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 cursor-pointer hover:bg-yellow-50 transition-colors"
-                    onClick={() => toggleOrderDetails(order.id)}
+                    key={order.id}
+                    className="bg-white rounded-lg shadow-md p-4 border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow"
+                    onClick={() => openOrderModal(order)}
                   >
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                      {expandedOrders[order.id] ? (
-                        <ChevronUp className="w-5 h-5 text-red-500" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-red-500" />
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
-                        </p>
-                        <p className="text-sm text-gray-500">Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleDateString()}</p>
-                      </div>
+                    {/* Customer Name and Order Info */}
+                    <div className="mb-3">
+                      <h3 className="font-semibold text-gray-900">
+                        {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleDateString()}
+                      </p>
                     </div>
-                    
-                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+
+                    {/* Order Details */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-lg font-bold text-gray-900">₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
                         <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
                       </div>
-                      
                       <span className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
                         {getStatusIcon(order.status)}
                         {getStatusLabel(order.status)}
                       </span>
                     </div>
+
+                    {/* View Details Button */}
+                    <button
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openOrderModal(order);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View Details
+                    </button>
                   </div>
+                ))}
+              </div>
+
+              {/* Desktop Expandable View */}
+              <div className="hidden md:block divide-y divide-gray-200">
+                {filteredOrders.map((order) => (
+                  <div key={order.id} id={`order-${order.id}`} className="bg-white transition-all duration-200">
+                    {/* Order header - always visible */}
+                    <div
+                      className="p-4 md:px-6 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 cursor-pointer hover:bg-yellow-50 transition-colors"
+                      onClick={() => toggleOrderDetails(order.id)}
+                    >
+                      <div className="flex items-center gap-3 w-full md:w-auto">
+                        {expandedOrders[order.id] ? (
+                          <ChevronUp className="w-5 h-5 text-red-500" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-red-500" />
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {order.shippingAddress?.name || `${(order as any).firstName || ''} ${(order as any).lastName || ''}`.trim() || 'Customer'}
+                          </p>
+                          <p className="text-sm text-gray-500">Order #{order.id.substring(0, 8)}... • {order.createdAt.toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900">₱{order.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                          <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
+                        </div>
+
+                        <span className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status || 'pending')}`}>
+                          {getStatusIcon(order.status)}
+                          {getStatusLabel(order.status)}
+                        </span>
+                      </div>
+                    </div>
                   
                   {/* Order details - expandable */}
                   {expandedOrders[order.id] && (
@@ -573,13 +647,297 @@ export default function StaffDashboard() {
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {isModalOpen && selectedOrderForModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto my-8">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
+              <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedOrderForModal(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 space-y-4">
+              {/* Order ID and Date */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">Order ID:</span>
+                      <span className="ml-2 font-mono text-xs bg-white px-2 py-1 rounded">{selectedOrderForModal.id}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">Order Date:</span>
+                      <span className="ml-2">{selectedOrderForModal.createdAt.toLocaleString()}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">
+                      <span className="font-semibold">Status:</span>
+                      <span className={`ml-2 px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full ${getStatusColor(selectedOrderForModal.status || 'pending')}`}>
+                        {getStatusIcon(selectedOrderForModal.status)}
+                        {getStatusLabel(selectedOrderForModal.status)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Information */}
+              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Customer Information
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-gray-500 font-medium">Name:</span>
+                    <span className="ml-2">{selectedOrderForModal.shippingAddress?.name || `${(selectedOrderForModal as any).firstName || ''} ${(selectedOrderForModal as any).lastName || ''}`.trim() || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500 font-medium">Email:</span>
+                    <span className="ml-2">{(selectedOrderForModal as any).email || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500 font-medium">Phone:</span>
+                    <span className="ml-2">{selectedOrderForModal.shippingAddress?.phone || (selectedOrderForModal as any).phone || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500 font-medium">Address:</span>
+                    <span className="ml-2">{selectedOrderForModal.shippingAddress?.street || (selectedOrderForModal as any).address || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500 font-medium">City:</span>
+                    <span className="ml-2">{selectedOrderForModal.shippingAddress?.city || (selectedOrderForModal as any).city || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-gray-500 font-medium">Postal Code:</span>
+                    <span className="ml-2">{selectedOrderForModal.shippingAddress?.postalCode || (selectedOrderForModal as any).zipCode || 'N/A'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-green-600" />
+                  Payment Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 font-medium">Payment Method:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      (selectedOrderForModal as any).paymentMethod === 'cod'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {(selectedOrderForModal as any).paymentMethod === 'cod' ? '💵 Cash on Delivery' : '📱 GCash'}
+                    </span>
+                  </div>
+
+                  {/* Valid ID for COD */}
+                  {(selectedOrderForModal as any).paymentMethod === 'cod' && (selectedOrderForModal as any).validIdUrl && (
+                    <div className="border-t pt-3 mt-3">
+                      <p className="text-gray-500 font-medium mb-2">Valid ID (Uploaded):</p>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <img
+                          src={(selectedOrderForModal as any).validIdUrl}
+                          alt="Customer Valid ID"
+                          className="max-w-full w-full rounded-lg border-2 border-gray-300 cursor-pointer hover:border-blue-500 transition-colors"
+                          onClick={() => window.open((selectedOrderForModal as any).validIdUrl, '_blank')}
+                          style={{ maxHeight: '300px', objectFit: 'contain' }}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          💡 Click image to view full size in new tab
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* GCash Number */}
+                  {(selectedOrderForModal as any).paymentMethod === 'gcash' && (selectedOrderForModal as any).gcashNumber && (
+                    <div className="border-t pt-3 mt-3">
+                      <p className="text-gray-500 font-medium">GCash Number:</p>
+                      <p className="text-lg font-semibold text-blue-600 mt-1">
+                        {(selectedOrderForModal as any).gcashNumber}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <Package className="w-5 h-5 text-purple-600" />
+                  Order Items
+                </h3>
+                <div className="divide-y divide-gray-100">
+                  {selectedOrderForModal.items.map((item, index) => {
+                    const product = productCache[item.productId];
+                    return (
+                      <div key={index} className="py-3 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-800">
+                            {product?.name || 'Loading...'}
+                          </p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Quantity: <span className="font-semibold text-gray-700">{item.quantity}</span> ×
+                            <span className="ml-1">₱{item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                          </p>
+                        </div>
+                        <p className="font-semibold text-lg">₱{(item.price * item.quantity).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Order Summary */}
+                <div className="mt-4 pt-4 border-t-2 border-gray-200 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <p className="text-gray-600">Subtotal:</p>
+                    <p className="font-medium">₱{(selectedOrderForModal.subtotal || selectedOrderForModal.total - 99).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <p className="text-gray-600">Shipping Fee:</p>
+                    <p className="font-medium">₱{(selectedOrderForModal.shippingCost || 99).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <p className="font-bold text-lg">Total:</p>
+                    <p className="font-bold text-xl text-red-600">₱{selectedOrderForModal.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status History */}
+              {selectedOrderForModal.statusHistory && selectedOrderForModal.statusHistory.length > 0 && (
+                <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <History className="w-5 h-5 text-indigo-600" />
+                    Status History
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedOrderForModal.statusHistory
+                      .slice()
+                      .sort((a, b) => {
+                        const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                        const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                        return timeB - timeA;
+                      })
+                      .map((history, index) => (
+                        <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border-l-4 border-indigo-400">
+                          <div className="flex-shrink-0 mt-1">
+                            {getStatusIcon(history.status)}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(history.status)}`}>
+                                {getStatusLabel(history.status)}
+                              </span>
+                              {index === 0 && (
+                                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full font-medium">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-2">
+                              {history.timestamp instanceof Date
+                                ? history.timestamp.toLocaleString('en-PH', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                                : new Date(history.timestamp).toLocaleString('en-PH', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })
+                              }
+                            </p>
+                            {history.updatedBy && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Updated by: <span className="font-medium">{history.updatedBy}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                <h3 className="font-semibold text-gray-800 mb-3">Update Status</h3>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <select
+                    value={selectedOrderForModal.status || 'pending'}
+                    onChange={(e) => {
+                      updateOrderStatus(selectedOrderForModal.id, e.target.value);
+                      // Update the modal's order state
+                      setSelectedOrderForModal({
+                        ...selectedOrderForModal,
+                        status: e.target.value as any
+                      });
+                    }}
+                    className="flex-1 p-2 border border-yellow-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="processing">Preparing</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                  <button
+                    onClick={() => deleteOrder(selectedOrderForModal.id)}
+                    className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Order
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedOrderForModal(null);
+                }}
+                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
